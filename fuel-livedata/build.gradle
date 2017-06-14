@@ -14,7 +14,7 @@ android {
     buildToolsVersion parent.ext.build_tool_version
 
     defaultConfig {
-        minSdkVersion 9
+        minSdkVersion 14
         targetSdkVersion parent.ext.compile_sdk_version
         versionCode 1
         versionName parent.ext.publish_version
@@ -54,6 +54,9 @@ jacocoAndroidUnitTestReport {
 }
 
 dependencies {
+
+    compile "android.arch.lifecycle:extensions:$rootProject.archLifecycleVersion"
+
     compile "org.jetbrains.kotlin:kotlin-stdlib:$parent.ext.kotlin_version"
 
     compile project(':fuel')
@@ -73,12 +76,14 @@ buildscript {
 }
 
 publish {
-    artifactId = 'fuel-android'
+    artifactId = 'fuel-livedata'
     autoPublish = true
     desc = 'The easiest HTTP networking library in Kotlin/Android'
     groupId = 'com.github.kittinunf.fuel'
     licences = ['MIT']
     publishVersion = parent.ext.publish_version
-    uploadName = 'Fuel-Android'
+    uploadName = 'Fuel-LiveData'
     website = 'https://github.com/kittinunf/Fuel'
 }
+
+

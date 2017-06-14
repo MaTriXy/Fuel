@@ -1,6 +1,7 @@
 # Fuel
 
-[ ![Kotlin](https://img.shields.io/badge/Kotlin-1.0.6-blue.svg)](http://kotlinlang.org) [ ![jcenter](https://api.bintray.com/packages/kittinunf/maven/Fuel-Android/images/download.svg) ](https://bintray.com/kittinunf/maven/Fuel-Android/_latestVersion) [![Build Status](https://travis-ci.org/kittinunf/Fuel.svg?branch=master)](https://travis-ci.org/kittinunf/Fuel)
+[ ![Kotlin](https://img.shields.io/badge/Kotlin-1.1.2-blue.svg)](http://kotlinlang.org) [ ![jcenter](https://api.bintray.com/packages/kittinunf/maven/Fuel-Android/images/download.svg) ](https://bintray.com/kittinunf/maven/Fuel-Android/_latestVersion) [![Build Status](https://travis-ci.org/kittinunf/Fuel.svg?branch=master)](https://travis-ci.org/kittinunf/Fuel)
+[![Codecov](https://codecov.io/github/kittinunf/Fuel/coverage.svg?branch=master)](https://codecov.io/gh/kittinunf/Fuel)
 
 The easiest HTTP networking library for Kotlin/Android.
 
@@ -17,7 +18,7 @@ The easiest HTTP networking library for Kotlin/Android.
 - [x] Support response deserialization into plain old object (both Kotlin & Java)
 - [x] Automatically invoke handler on Android Main Thread when using Android Module
 - [x] Special test mode for easier testing
-- [x] RxJava support out of the box
+- [x] RxJava 2.x support out of the box
 
 ## Installation
 
@@ -68,7 +69,7 @@ dependencies {
 
 //if we set baseURL beforehand, simply use relativePath
 FuelManager.instance.basePath = "http://httpbin.org"
-"/get".httpGet().responseString { request, response, result ->    
+"/get".httpGet().responseString { request, response, result ->
     //make a GET to http://httpbin.org/get and do something with response
     val (data, error) = result
     if (error != null) {
@@ -296,7 +297,7 @@ Fuel.get("http://httpbin.org/get", params).timeout(timeout).readTimeout(readTime
 ``` Kotlin
 Fuel.download("http://httpbin.org/bytes/32768").destination { response, url ->
     File.createTempFile("temp", ".tmp")
-}.response { req, res, result -> {
+}.response { req, res, result ->
 
 }
 
@@ -304,7 +305,7 @@ Fuel.download("http://httpbin.org/bytes/32768").destination { response, url ->
     File.createTempFile("temp", ".tmp")
 }.progress { readBytes, totalBytes ->
     val progress = readBytes.toFloat() / totalBytes.toFloat()
-}.response { req, res, result -> {
+}.response { req, res, result ->
 
 }
 ```
@@ -322,6 +323,18 @@ Fuel.upload("/put", Method.PUT).source { request, url ->
     File.createTempFile("temp", ".tmp");
 }.responseString { request, response, result ->
     // calls to http://example.com/api/put with PUT
+
+}
+
+//upload with multiple files
+Fuel.upload("/post").sources { request, url ->
+    listOf(
+        File.createTempFile("temp1", ".tmp"),
+        File.createTempFile("temp2", ".tmp")
+    )
+}.name {
+    "temp"
+}.responseString { request, response, result ->
 
 }
 ```
@@ -384,7 +397,7 @@ data class User(val firstName: String = "",
 }
 
 //Use httpGet extension
-"http://www.example.com/user/1".httpGet().responseObject(User.Deserializer()) { req, res, result
+"http://www.example.com/user/1".httpGet().responseObject(User.Deserializer()) { req, res, result ->
     //result is of type Result<User, Exception>
     val (user, err) = result
 
@@ -515,16 +528,16 @@ In order to disable test mode, just call `Fuel.regularMode()`
 }
 ```
 
-* There are 6 extensions over `Request` that provide RxJava `Observable<T>` as return type.
+* There are 6 extensions over `Request` that provide RxJava 2.x `Single<Result<T, FuelError>>` as return type.
 
 ``` Kotlin
-fun Request.rx_response(): Observable<Pair<Response, ByteArray>>
-fun Request.rx_responseString(charset: Charset): Observable<Pair<Response, String>>
-fun <T : Any> Request.rx_responseObject(deserializable: Deserializable<T>): Observable<Pair<Response, T>>
+fun Request.rx_response(): Single<Pair<Response, Result<ByteArray, FuelError>>>
+fun Request.rx_responseString(charset: Charset): Single<Pair<Response, Result<String, FuelError>>>
+fun <T : Any> Request.rx_responseObject(deserializable: Deserializable<T>): Single<Pair<Response, Result<T, FuelError>>>
 
-fun Request.rx_data(): Observable<ByteArray>
-fun Request.rx_string(charset: Charset): Observable<String>
-fun <T : Any> Request.rx_object(deserializable: Deserializable<T>): Observable<T>
+fun Request.rx_data(): Single<Result<ByteArray, FuelError>>
+fun Request.rx_string(charset: Charset): Single<Result<String, FuelError>>
+fun <T : Any> Request.rx_object(deserializable: Deserializable<T>): Single<Result<T, FuelError>>
 ```
 
 ## Other libraries

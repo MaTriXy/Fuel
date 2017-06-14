@@ -29,12 +29,13 @@ class HttpClient(val proxy: Proxy? = null) : Client {
                 readTimeout = timeoutRead
                 doInput = true
                 useCaches = false
-                requestMethod = request.httpMethod.value
+                requestMethod = if (request.httpMethod == Method.PATCH) Method.POST.value else request.httpMethod.value
                 setDoOutput(connection, request.httpMethod)
                 instanceFollowRedirects = false
                 for ((key, value) in request.httpHeaders) {
                     setRequestProperty(key, value)
                 }
+                if (request.httpMethod == Method.PATCH) setRequestProperty("X-HTTP-Method-Override", "PATCH")
                 setBodyIfAny(connection, request.httpBody)
             }
 
@@ -56,10 +57,13 @@ class HttpClient(val proxy: Proxy? = null) : Client {
                 }
 
                 if (dataStream != null) {
-                    data = if (contentEncoding.compareTo("gzip", true) == 0) {
-                        GZIPInputStream(dataStream).readBytes()
-                    } else {
-                        dataStream.readBytes()
+                    // HEAD responses have no input stream. Trying to parse an empty GZIPInputStream fails.
+                    data = if (request.httpMethod == Method.HEAD) ByteArray(0) else {
+                        if (contentEncoding.compareTo("gzip", true) == 0) {
+                            GZIPInputStream(dataStream).readBytes()
+                        } else {
+                            dataStream.readBytes()
+                        }
                     }
                 }
 

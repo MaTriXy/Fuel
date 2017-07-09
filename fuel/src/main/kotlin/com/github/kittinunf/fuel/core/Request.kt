@@ -8,7 +8,9 @@ import com.github.kittinunf.fuel.core.requests.TaskRequest
 import com.github.kittinunf.fuel.core.requests.UploadTaskRequest
 import com.github.kittinunf.fuel.util.Base64
 import com.github.kittinunf.result.Result
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.OutputStream
 import java.net.URL
 import java.nio.charset.Charset
 import java.util.concurrent.Callable
@@ -35,7 +37,13 @@ class Request : Fuel.RequestConvertible {
     lateinit var url: URL
 
     //body
-    var httpBody: ByteArray = ByteArray(0)
+    var bodyCallback: ((Request, OutputStream?, Long) -> Long)? = null
+    val httpBody: ByteArray
+        get() {
+            return ByteArrayOutputStream().apply {
+                bodyCallback?.invoke(request, this, 0)
+            }.toByteArray()
+        }
 
     //headers
     val httpHeaders = mutableMapOf<String, String>()
@@ -104,7 +112,10 @@ class Request : Fuel.RequestConvertible {
     }
 
     fun body(body: ByteArray): Request {
-        httpBody = body
+        bodyCallback = { request, outpustream, totalLength ->
+            outpustream?.write(body)
+            body.size.toLong()
+        }
         return this
     }
 
@@ -149,7 +160,7 @@ class Request : Fuel.RequestConvertible {
         }
 
         uploadTaskRequest.apply {
-            sourceCallback = { request, url -> parts.map { it.file } }
+            sourceCallback = { _, _ -> parts.map { it.file } }
         }
 
         return this
@@ -168,7 +179,7 @@ class Request : Fuel.RequestConvertible {
     }
 
     fun source(source: (Request, URL) -> File): Request {
-        sources { request, url ->
+        sources { request, _ ->
             listOf(source.invoke(request, request.url))
         }
 

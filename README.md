@@ -1,13 +1,13 @@
 # Fuel
 
-[ ![Kotlin](https://img.shields.io/badge/Kotlin-1.1.2-blue.svg)](http://kotlinlang.org) [ ![jcenter](https://api.bintray.com/packages/kittinunf/maven/Fuel-Android/images/download.svg) ](https://bintray.com/kittinunf/maven/Fuel-Android/_latestVersion) [![Build Status](https://travis-ci.org/kittinunf/Fuel.svg?branch=master)](https://travis-ci.org/kittinunf/Fuel)
+[ ![Kotlin](https://img.shields.io/badge/Kotlin-1.1.4.3-blue.svg)](http://kotlinlang.org) [ ![jcenter](https://api.bintray.com/packages/kittinunf/maven/Fuel-Android/images/download.svg) ](https://bintray.com/kittinunf/maven/Fuel-Android/_latestVersion) [![Build Status](https://travis-ci.org/kittinunf/Fuel.svg?branch=master)](https://travis-ci.org/kittinunf/Fuel)
 [![Codecov](https://codecov.io/github/kittinunf/Fuel/coverage.svg?branch=master)](https://codecov.io/gh/kittinunf/Fuel)
 
 The easiest HTTP networking library for Kotlin/Android.
 
 ## Features
 
-- [x] Support basic HTTP GET/POST/PUT/DELETE/HEAD in a fluent style interface
+- [x] Support basic HTTP GET/POST/PUT/DELETE/HEAD/PATCH in a fluent style interface
 - [x] Support both asynchronous and blocking requests
 - [x] Download file
 - [x] Upload file (multipart/form-data)
@@ -20,6 +20,8 @@ The easiest HTTP networking library for Kotlin/Android.
 - [x] Special test mode for easier testing
 - [x] RxJava 2.x support out of the box
 - [x] Google Components [LiveData](https://developer.android.com/topic/libraries/architecture/livedata.html) support
+- [x] Gson module support
+- [x] API Routing
 
 ## Installation
 
@@ -27,9 +29,25 @@ The easiest HTTP networking library for Kotlin/Android.
 
 * [Result](https://github.com/kittinunf/Result) - The modelling for success/failure of operations in Kotlin
 
+### Dependency - fuel-android
+
+* [Android SDK](https://developer.android.com/studio/index.html) - Android SDK
+
+### Dependency - fuel-livedata
+
+* [Live Data](https://developer.android.com/topic/libraries/architecture/livedata.html) - Android Architecture Components - LiveData
+
 ### Dependency - fuel-rxjava
 
 * [RxJava](https://github.com/ReactiveX/RxJava) - RxJava – Reactive Extensions for the JVM
+
+### Dependency - fuel-gson
+
+* [Gson](https://github.com/google/gson) - Gson - A Java serialization/deserialization library to convert Java Objects into JSON and back
+
+### Dependency - fuel-jackson
+
+* [Jackson](https://github.com/FasterXML/jackson-module-kotlin) - Jackson - The JSON library for Java
 
 ### Gradle
 
@@ -41,8 +59,10 @@ repositories {
 dependencies {
     compile 'com.github.kittinunf.fuel:fuel:<latest-version>' //for JVM
     compile 'com.github.kittinunf.fuel:fuel-android:<latest-version>' //for Android
-    compile 'com.github.kittinunf.fuel:fuel-rxjava:<latest-version>' //for RxJava support
     compile 'com.github.kittinunf.fuel:fuel-livedata:<latest-version>' //for LiveData support
+    compile 'com.github.kittinunf.fuel:fuel-rxjava:<latest-version>' //for RxJava support
+    compile 'com.github.kittinunf.fuel:fuel-gson:<latest-version>' //for Gson support
+    compile 'com.github.kittinunf.fuel:fuel-jackson:<latest-version>' //for Jackson support
 }
 ```
 
@@ -74,7 +94,7 @@ FuelManager.instance.basePath = "http://httpbin.org"
 "/get".httpGet().responseString { request, response, result ->
     //make a GET to http://httpbin.org/get and do something with response
     val (data, error) = result
-    if (error != null) {
+    if (error == null) {
         //do something when success
     } else {
         //error handling
@@ -205,6 +225,15 @@ Fuel.delete("http://httpbin.org/delete").response { request, response, result ->
 
 ``` Kotlin
 Fuel.head("http://httpbin.org/get").response { request, response, result ->
+   // request body should be empty.
+}
+```
+
+### PATCH
+* The default `client` is [`HttpClient`](https://github.com/kittinunf/Fuel/blob/master/fuel/src/main/kotlin/com/github/kittinunf/fuel/toolbox/HttpClient.kt) which is a thin wrapper over [`java.net.HttpUrlConnnection`](http://developer.android.com/reference/java/net/HttpURLConnection.html). [`java.net.HttpUrlConnnection`](http://developer.android.com/reference/java/net/HttpURLConnection.html) does not support a [`PATCH`](http://download.java.net/jdk7/archive/b123/docs/api/java/net/HttpURLConnection.html#setRequestMethod(java.lang.String)) method. [`HttpClient`](https://github.com/kittinunf/Fuel/blob/master/fuel/src/main/kotlin/com/github/kittinunf/fuel/toolbox/HttpClient.kt) converts `PATCH` requests to a `POST` request and adds a `X-HTTP-Method-Override: PATCH` header. While this is a semi-standard industry practice not all APIs are configured to accept this header by default.
+
+``` Kotlin
+Fuel.patch("http://httpbin.org/patch").response { request, response, result ->
    // request body should be empty.
 }
 ```
@@ -340,6 +369,38 @@ Fuel.upload("/post").sources { request, url ->
 
 }
 ```
+### Specify custom field names for files
+```Kotlin
+Fuel.upload("/post").sources { request, url ->
+    listOf(
+        //DataPart takes a file, and you can specify the name and/or type
+        DataPart(File.createTempFile("temp1", ".tmp"), "image/jpeg"), 
+        DataPart(File.createTempFile("temp2", ".tmp"), "file2"),
+        DataPart(File.createTempFile("temp3", ".tmp"), "third-file", "image/jpeg")
+    )
+}.responseString { request, response, result ->
+    ...
+}
+```
+### Upload a multipart form without a file
+
+``` Kotlin
+val formData = listOf("Email" to "mail@example.com", "Name" to "Joe Smith" )
+Fuel.upload("/post", param = formData)
+    //Upload normally requires a file, but we can give it an empty list of `DataPart`
+    .dataParts { request, url -> listOf<DataPart>() } 
+    .responseString { request, response, result ->
+        ...
+    }
+```
+	
+### Upload from an `InputStream`
+
+``` Kotlin
+Fuel.upload("/post").blob { request, url ->
+    Blob("filename.png", someObject.length, { someObject.getInputStream() })
+}
+```
 
 ### Authentication
 
@@ -407,6 +468,18 @@ data class User(val firstName: String = "",
     println(user.lastName)
 }
 
+```
+
+### Gson Deserialization
+
+* Fuel also provides a built in support for Gson Deserialization. This is possible by including the [Gson](https://github.com/kittinunf/Fuel/tree/master/fuel-gson) module in your dependency block.
+
+``` Kotlin
+
+data class HttpBinUserAgentModel(var userAgent: String = "")
+
+Fuel.get("/user-agent").responseObject<HttpBinUserAgentModel> { _, _, result ->
+}
 ```
 
 * There are 4 methods to support response deserialization depending on your needs (also depending on JSON parsing library of your choice), and you are required to implement only one of them.
@@ -552,11 +625,62 @@ Fuel.get("www.example.com/get").liveDataResponse().observe(this) {
 }
 ```
 
+### Routing Support
+
+In order to organize better your network stack FuelRouting interface allows you to easily setup a Router design pattern.
+
+```Kotlin
+sealed class WeatherApi: FuelRouting {
+
+    override val basePath = "https://www.metaweather.com"
+
+    class weatherFor(val location: String): WeatherApi() {}
+
+    override val method: Method
+        get() {
+            when(this) {
+                is weatherFor -> return Method.GET
+            }
+        }
+
+    override val path: String
+        get() {
+            return when(this) {
+                is weatherFor -> "/api/location/search/"
+            }
+        }
+
+    override val params: List<Pair<String, Any?>>?
+        get() {
+            return when(this) {
+                is weatherFor -> listOf("query" to this.location)
+            }
+        }
+
+    override val headers: Map<String, String>?
+        get() {
+            return null
+        }
+
+}
+
+
+// Usage
+Fuel.request(WeatherApi.weatherFor("london")).responseJson { request, response, result ->
+            result.fold(success = { json ->
+                Log.d("qdp success", json.array().toString())
+            }, failure = { error ->
+                Log.e("qdp error", error.toString())
+            })
+        }
+```
+
 ## Other libraries
-If you like Fuel, you might also like other libraries;
+If you like Fuel, you might also like other libraries of mine;
 * [Result](https://github.com/kittinunf/Result) - The modelling for success/failure of operations in Kotlin
-* [Kovenant](https://github.com/mplatvoet/kovenant) - Kovenant. Promises for Kotlin.
 * [Fuse](https://github.com/kittinunf/Fuse) - A simple generic LRU memory/disk cache for Android written in Kotlin
+* [Forge](https://github.com/kittinunf/Forge) - Functional style JSON parsing written in Kotlin
+* [ReactiveAndroid](https://github.com/kittinunf/ReactiveAndroid) - Reactive events and properties with RxJava for Android SDK
 
 ## Credits
 

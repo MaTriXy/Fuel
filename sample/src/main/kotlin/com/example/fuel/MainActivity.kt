@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import awaitString
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.FuelManager
@@ -23,7 +24,10 @@ import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_main.mainAuxText
 import kotlinx.android.synthetic.main.activity_main.mainClearButton
 import kotlinx.android.synthetic.main.activity_main.mainGoButton
+import kotlinx.android.synthetic.main.activity_main.mainGoCoroutineButton
 import kotlinx.android.synthetic.main.activity_main.mainResultText
+import kotlinx.coroutines.experimental.android.UI
+import kotlinx.coroutines.experimental.launch
 import java.io.File
 import java.io.Reader
 
@@ -40,6 +44,12 @@ class MainActivity : AppCompatActivity() {
             baseHeaders = mapOf("Device" to "Android")
             baseParams = listOf("key" to "value")
 //            addResponseInterceptor { loggingResponseInterceptor() }
+        }
+
+        mainGoCoroutineButton.setOnClickListener {
+            launch(UI) {
+                executeCoroutine()
+            }
         }
 
         mainGoButton.setOnClickListener {
@@ -66,6 +76,17 @@ class MainActivity : AppCompatActivity() {
         httpCancel()
         httpRxSupport()
         httpLiveDataSupport()
+    }
+
+    private suspend fun executeCoroutine() {
+        httpGetCoroutine()
+    }
+
+    private suspend fun httpGetCoroutine() {
+        val (request, response, result) = Fuel.get("/get", listOf("userId" to "123")).awaitString()
+        Log.d(TAG, response.toString())
+        Log.d(TAG, request.toString())
+        update(result)
     }
 
     private fun httpCancel() {
@@ -105,10 +126,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun httpGet() {
-        Fuel.get("/get", listOf("foo" to "foo", "bar" to "bar")).responseString { request, _, result ->
-            Log.d(TAG, request.cUrlString())
-            update(result)
-        }
+        Fuel.get("/get", listOf("foo" to "foo", "bar" to "bar"))
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.cUrlString())
+                    update(result)
+                }
 
         "/get".httpGet().responseString { request, _, result ->
             Log.d(TAG, request.toString())
@@ -117,41 +139,47 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun httpPut() {
-        Fuel.put("/put", listOf("foo" to "foo", "bar" to "bar")).responseString { request, _, result ->
-            Log.d(TAG, request.cUrlString())
-            update(result)
-        }
+        Fuel.put("/put", listOf("foo" to "foo", "bar" to "bar"))
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.cUrlString())
+                    update(result)
+                }
 
-        "/put".httpPut(listOf("foo" to "foo", "bar" to "bar")).responseString { request, _, result ->
-            Log.d(TAG, request.toString())
-            update(result)
-        }
+        "/put".httpPut(listOf("foo" to "foo", "bar" to "bar"))
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.toString())
+                    update(result)
+                }
 
     }
 
     private fun httpPost() {
-        Fuel.post("/post", listOf("foo" to "foo", "bar" to "bar")).responseString { request, _, result ->
-            Log.d(TAG, request.cUrlString())
-            update(result)
-        }
+        Fuel.post("/post", listOf("foo" to "foo", "bar" to "bar"))
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.cUrlString())
+                    update(result)
+                }
 
-        "/post".httpPost(listOf("foo" to "foo", "bar" to "bar")).responseString { request, _, result ->
-            Log.d(TAG, request.toString())
-            update(result)
-        }
+        "/post".httpPost(listOf("foo" to "foo", "bar" to "bar"))
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.toString())
+                    update(result)
+                }
 
     }
 
     private fun httpDelete() {
-        Fuel.delete("/delete", listOf("foo" to "foo", "bar" to "bar")).responseString { request, _, result ->
-            Log.d(TAG, request.cUrlString())
-            update(result)
-        }
+        Fuel.delete("/delete", listOf("foo" to "foo", "bar" to "bar"))
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.cUrlString())
+                    update(result)
+                }
 
-        "/delete".httpDelete(listOf("foo" to "foo", "bar" to "bar")).responseString { request, _, result ->
-            Log.d(TAG, request.toString())
-            update(result)
-        }
+        "/delete".httpDelete(listOf("foo" to "foo", "bar" to "bar"))
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.toString())
+                    update(result)
+                }
 
     }
 
@@ -192,15 +220,17 @@ class MainActivity : AppCompatActivity() {
     private fun httpBasicAuthentication() {
         val username = "U$3|2|\\|@me"
         val password = "P@$\$vv0|2|)"
-        Fuel.get("/basic-auth/$username/$password").authenticate(username, password).responseString { request, _, result ->
-            Log.d(TAG, request.toString())
-            update(result)
-        }
+        Fuel.get("/basic-auth/$username/$password").authenticate(username, password)
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.toString())
+                    update(result)
+                }
 
-        "/basic-auth/$username/$password".httpGet().authenticate(username, password).responseString { request, _, result ->
-            Log.d(TAG, request.toString())
-            update(result)
-        }
+        "/basic-auth/$username/$password".httpGet().authenticate(username, password)
+                .responseString { request, _, result ->
+                    Log.d(TAG, request.toString())
+                    update(result)
+                }
     }
 
     private fun httpRxSupport() {

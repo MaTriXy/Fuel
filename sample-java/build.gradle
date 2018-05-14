@@ -2,7 +2,6 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion fuelCompileSdkVersion
-    buildToolsVersion fuelBuildToolVersion
 
     defaultConfig {
         applicationId "com.example.java.fuel"
@@ -10,6 +9,10 @@ android {
         targetSdkVersion fuelCompileSdkVersion
         versionCode 1
         versionName "1.0"
+    }
+
+    dataBinding{
+        enabled true
     }
 
     buildTypes {
@@ -22,10 +25,7 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "com.android.support:appcompat-v7:$androidSupportVersion"
 
-    compile "com.android.support:appcompat-v7:$androidSupportVersion"
-
-    compile project(':fuel-android')
+    api project(':fuel-android')
 }
-

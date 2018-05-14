@@ -1,10 +1,16 @@
 package com.github.kittinunf.fuel
 
-import com.github.kittinunf.fuel.core.*
+import com.github.kittinunf.fuel.core.Encoding
+import com.github.kittinunf.fuel.core.FuelError
+import com.github.kittinunf.fuel.core.FuelManager
+import com.github.kittinunf.fuel.core.Method
+import com.github.kittinunf.fuel.core.Request
+import com.github.kittinunf.fuel.core.Response
 import org.hamcrest.CoreMatchers.*
 import org.junit.Assert.assertThat
 import org.junit.Test
 import java.net.HttpURLConnection
+import java.net.URL
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
@@ -62,6 +68,32 @@ class RequestTest : BaseTestCase() {
     }
 
     @Test
+    fun testResponseURLShouldSameWithRequestURL() {
+        var request: Request? = null
+        var response: Response? = null
+        var data: Any? = null
+        var error: FuelError? = null
+
+        manager.request(Method.GET, "http://httpbin.org/get").response { req, res, result ->
+            request = req
+            response = res
+
+            val (d, err) = result
+            data = d
+            error = err
+        }
+
+        assertThat(request, notNullValue())
+        assertThat(response, notNullValue())
+        assertThat(error, nullValue())
+        assertThat(data, notNullValue())
+
+        assertThat(request?.url, notNullValue())
+        assertThat(response?.url, notNullValue())
+        assertThat(request?.url, isEqualTo(response?.url))
+    }
+
+    @Test
     fun httpGetRequestWithDataResponse() {
         var request: Request? = null
         var response: Response? = null
@@ -109,6 +141,131 @@ class RequestTest : BaseTestCase() {
 
         val statusCode = HttpURLConnection.HTTP_OK
         assertThat(response?.statusCode, isEqualTo(statusCode))
+    }
+
+    @Test
+    fun httpGetRequestWithImageResponse() {
+        var request: Request? = null
+        var response: Response? = null
+        var data: Any? = null
+        var error: FuelError? = null
+
+        manager.request(Method.GET, "http://httpbin.org/image/png").responseString { req, res, result ->
+            request = req
+            response = res
+
+            val (d, err) = result
+            data = d
+            error = err
+        }
+
+        assertThat(request, notNullValue())
+        assertThat(response, notNullValue())
+        assertThat(error, nullValue())
+        assertThat(data, notNullValue())
+
+        assertThat(response?.toString(), containsString("bytes of image/png"))
+
+        val statusCode = HttpURLConnection.HTTP_OK
+        assertThat(response?.statusCode, isEqualTo(statusCode))
+    }
+
+    @Test
+    fun httpGetRequestWithBytesResponse() {
+        var request: Request? = null
+        var response: Response? = null
+        var data: Any? = null
+        var error: FuelError? = null
+
+        manager.request(Method.GET, "http://httpbin.org/bytes/555").responseString { req, res, result ->
+            request = req
+            response = res
+
+            val (d, err) = result
+            data = d
+            error = err
+        }
+
+        assertThat(request, notNullValue())
+        assertThat(response, notNullValue())
+        assertThat(error, nullValue())
+        assertThat(data, notNullValue())
+
+        assertThat(response?.toString(), containsString("Body : (555 bytes of application/octet-stream)"))
+
+        val statusCode = HttpURLConnection.HTTP_OK
+        assertThat(response?.statusCode, isEqualTo(statusCode))
+    }
+
+    @Test
+    fun testProcessBodyWithUnknownContentTypeAndNoData() {
+        var request: Request? = null
+        var response: Response? = null
+        var error: FuelError? = null
+
+        manager.request(Method.GET, "http://httpbin.org/bytes/555").responseString { req, res, result ->
+            request = req
+            response = res
+
+            val (d, err) = result
+            error = err
+        }
+
+        assertThat(request, notNullValue())
+        assertThat(response, notNullValue())
+        assertThat(error, nullValue())
+
+        assertThat(response?.processBody("(unknown)", ByteArray(0)), isEqualTo("(empty)"))
+    }
+
+    @Test
+    fun testGuessContentTypeWithNoContentTypeInHeaders() {
+        var request: Request? = null
+        var response: Response? = null
+        var data: Any? = null
+        var error: FuelError? = null
+
+        manager.request(Method.GET, "http://httpbin.org/bytes/555").responseString { req, res, result ->
+            request = req
+            response = res
+
+            val (d, err) = result
+            data = d
+            error = err
+        }
+
+        assertThat(request, notNullValue())
+        assertThat(response, notNullValue())
+        assertThat(error, nullValue())
+        assertThat(data, notNullValue())
+
+        val headers: Map<String, List<String>> = mapOf(Pair("Content-Type", listOf("")))
+        assertThat(response?.guessContentType(headers), isEqualTo("(unknown)"))
+    }
+
+    @Test
+    fun testGuessContentTypeWithNoHeaders() {
+        var request: Request? = null
+        var response: Response? = null
+        var data: Any? = null
+        var error: FuelError? = null
+
+        manager.request(Method.GET, "http://httpbin.org/image/png").responseString { req, res, result ->
+            request = req
+            response = res
+
+            val (d, err) = result
+            data = d
+            error = err
+        }
+
+        assertThat(request, notNullValue())
+        assertThat(response, notNullValue())
+        assertThat(error, nullValue())
+        assertThat(data, notNullValue())
+
+        val headers: Map<String, List<String>> = mapOf(Pair("Content-Type", listOf("")))
+        assertThat(response?.guessContentType(headers), isEqualTo("image/png"))
     }
 
     @Test
@@ -515,6 +672,58 @@ class RequestTest : BaseTestCase() {
             assertThat(data, nullValue())
             assertThat(error, nullValue())
         }
+    }
+
+    @Test
+    fun httpGetCurlString() {
+        val request = Request(method = Method.GET,
+                path = "",
+                url = URL("http://httpbin.org/get"),
+                headers = mutableMapOf("Authentication" to "Bearer xxx"),
+                parameters = listOf("foo" to "xxx"),
+                timeoutInMillisecond = 15000,
+                timeoutReadInMillisecond = 15000)
+
+        assertThat(request.cUrlString(), isEqualTo("$ curl -i -H \"Authentication:Bearer xxx\" http://httpbin.org/get"))
+    }
+
+    @Test
+    fun httpPostCurlString() {
+        val request = Request(method = Method.POST,
+                path = "",
+                url = URL("http://httpbin.org/post"),
+                headers = mutableMapOf("Authentication" to "Bearer xxx"),
+                parameters = listOf("foo" to "xxx"),
+                timeoutInMillisecond = 15000,
+                timeoutReadInMillisecond = 15000)
+
+        assertThat(request.cUrlString(), isEqualTo("$ curl -i -X POST -H \"Authentication:Bearer xxx\" http://httpbin.org/post"))
+    }
+
+    @Test
+    fun httpStringWithOutParams(){
+        val request = Request(Method.GET, "",
+                url = URL("http://httpbin.org/post"),
+                headers = mutableMapOf("Content-Type" to "text/html"),
+                timeoutInMillisecond = 15000,
+                timeoutReadInMillisecond = 15000)
+
+        assertThat(request.httpString(), startsWith("GET http"))
+        assertThat(request.httpString(), containsString("Content-Type"))
+    }
+
+    @Test
+    fun httpStringWithParams(){
+        val request = Request(Method.POST, "",
+                url = URL("http://httpbin.org/post"),
+                headers = mutableMapOf("Content-Type" to "text/html"),
+                parameters = listOf("foo" to "xxx"),
+                timeoutInMillisecond = 15000,
+                timeoutReadInMillisecond = 15000).body("it's a body")
+
+        assertThat(request.httpString(), startsWith("POST http"))
+        assertThat(request.httpString(), containsString("Content-Type"))
+        assertThat(request.httpString(), containsString("body"))
     }
 }
 

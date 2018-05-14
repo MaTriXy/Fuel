@@ -8,9 +8,10 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':fuel')
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     compile "com.squareup.moshi:moshi-kotlin:$moshiVersion"
+
+    compile project(':fuel')
 
     testCompile "junit:junit:$junitVersion"
 }
@@ -30,6 +31,6 @@ publish {
     groupId = 'com.github.kittinunf.fuel'
     licences = ['MIT']
     publishVersion = publishVersion
-    uploadName = 'Fuel-Moshi'
+    uploadName = 'Fuel-Android'
     website = 'https://github.com/kittinunf/Fuel'
 }

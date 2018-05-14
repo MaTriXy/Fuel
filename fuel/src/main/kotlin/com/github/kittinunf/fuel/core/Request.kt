@@ -30,8 +30,8 @@ class Request(
         var name: String = "",
         val names: MutableList<String> = mutableListOf(),
         val mediaTypes: MutableList<String> = mutableListOf(),
-        var timeoutInMillisecond: Int = 15000,
-        var timeoutReadInMillisecond: Int = timeoutInMillisecond) : Fuel.RequestConvertible {
+        var timeoutInMillisecond: Int,
+        var timeoutReadInMillisecond: Int) : Fuel.RequestConvertible {
 
     @Deprecated(replaceWith = ReplaceWith("method"), message = "http naming is deprecated, use 'method' instead")
     val httpMethod get() = method
@@ -241,27 +241,41 @@ class Request(
         }
     }
 
+    fun httpString(): String = buildString {
+        // url
+        val params = parameters.map { "${it.first}=${it.second}" }.joinToString(separator = "&", prefix = "?")
+        appendln("${method.value} ${url}${params}")
+        appendln()
+        // headers
+        for ((key, value) in headers) {
+            appendln("$key : $value")
+        }
+        // body
+        appendln()
+        appendln(String(getHttpBody()))
+    }
+
     fun cUrlString(): String = buildString {
         append("$ curl -i")
 
         //method
         if (method != Method.GET) {
-            append("-X $method")
+            append(" -X $method")
         }
 
         //body
         val escapedBody = String(getHttpBody()).replace("\"", "\\\"")
         if (escapedBody.isNotEmpty()) {
-            append("-d \"$escapedBody\"")
+            append(" -d \"$escapedBody\"")
         }
 
         //headers
         for ((key, value) in headers) {
-            append("-H \"$key:$value\"")
+            append(" -H \"$key:$value\"")
         }
 
         //url
-        append("\"$url\"")
+        append(" $url")
     }
 
     //byte array
